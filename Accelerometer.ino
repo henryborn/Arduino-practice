@@ -9,10 +9,12 @@ MPU6050 mpu(0x68);
 int16_t ax, ay, az;
 int16_t gx, gy, gz;
 float last_gx, last_gy, last_gz, last_ax, last_ay, last_az, new_ax, new_ay, new_az, new_gx, new_gy, new_gz;
-float dx, dy, dz, px, timer, vx, dt, steady, vdy, lastvdy;
+float dx, dy, dz, px, vx, steady, vdy, lastvdy, usdz, vdz, lastusdz, steadily;
 int ldy, lastldy;
-const int trig = 3;
-const int echo = 5;
+long duration;
+double timer, elapsed, dt;
+const int echo = 3;
+const int trig = 5;
 double SoundSpeed = .0343;
 VL53L0X_RangingMeasurementData_t measure;
 
@@ -31,6 +33,7 @@ class EmaFilter { //using this bad boy again
 };
 
 EmaFilter emaFilter(0.125);
+EmaFilter emAFilter(0.125);
 
 void setup() {
   Wire.begin();
@@ -56,29 +59,45 @@ void setup() {
   mpu.setXGyroOffset(610/8 + 320/8 + 160/8 + 80/4);
   mpu.setYGyroOffset(-170/8 - 100/4 + 20/8);
   mpu.setZGyroOffset(50/8 + 30/4);
+  digitalWrite(trig, LOW);
   timer = micros();
 }
 
 void loop() {
   dt = micros() - timer;
+  timer = micros();
   tof.rangingTest(&measure, false); //checks if it's ranging properly, put true to get an actual value
   ldy = measure.RangeMilliMeter;
 
   
   if (ldy > 2000 || ldy < 50) ldy = steady;
+  else {
+    steady = emaFilter.Run(ldy); // make sure there are no random huge jumps 
+  }
   
-  steady = emaFilter.Run(ldy); // make sure there are no random huge jumps 
   if (dt != 0) {
     vdy = ((ldy - lastldy)) / (dt / 1000);
   }
-  if (fabs(vdy - lastvdy) < 1.5) vdy = lastvdy;
-  if (fabs(vdy) < 1) vdy = 0;
-  Serial.print("vdy: "); Serial.println(vdy);
+  if (fabs(vdy) < .25) vdy = 0;
 
   lastvdy = vdy;
   lastldy = ldy;
+  digitalWrite(trig, HIGH); //Send signals (sends 8)
+  delayMicroseconds(10);
+  digitalWrite(trig, LOW); //Stop sending
 
-  Serial.println(steady / 1000);
+  duration = pulseIn(echo, HIGH, 20000); //the 20 ms time cap seems to censor out out of range things which is fantastic
+  usdz = SoundSpeed * duration / 2 / 100; //some math to turn time into distance
+
+
+  vdz = (usdz - lastusdz) / (dt / 1000000);
+  lastusdz = usdz;
+  
+  if (fabs(vdz) < .15) vdz = 0;
+  if (usdz != 0 && usdz < 2) {
+    steadily = emAFilter.Run(usdz);
+  }
+  
   mpu.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
   float virtual_x = az / 16384.0 * 9.81;
   float virtual_y = ax / 16384.0 * 9.81;
@@ -129,6 +148,10 @@ void loop() {
   //I am instead bringing back the ultrasonic sensor for the left to right axis and a lazar ranging module for up and down translation. I will assume it doesn't move forward and backward unless it is rotated where I will use trigonometry to track movement in each direction. Assume a mecanum drive where it can't move up and down unless a ramp is introduced.
   //I will use the MPU6050 for acceleration and sensor delay correction but will use the 2 position sensors for position and derive them for approximate velocity
 
+  Serial.print("vdy: "); Serial.println(vdy);
+  Serial.println(steady / 1000);
+  Serial.print("dz: "); Serial.println(steadily);
+  Serial.print("vdz: "); Serial.println(vdz);
   Serial.print(virtual_x);
   Serial.print(", ");
   Serial.print(virtual_y);
@@ -151,8 +174,6 @@ void loop() {
   Serial.print(", dgz: ");
   Serial.println(dz);
 
-  timer = micros();
-  delay(5);
 }
 
 //I know this is redundant, it wasn't when I wrote it I just wrote it very poorly and I don't feel like going through and cleaning it up
