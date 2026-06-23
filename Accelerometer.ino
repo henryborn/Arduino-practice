@@ -9,7 +9,7 @@ MPU6050 mpu(0x68);
 int16_t ax, ay, az;
 int16_t gx, gy, gz;
 float last_gx, last_gy, last_gz, last_ax, last_ay, last_az, new_ax, new_ay, new_az, new_gx, new_gy, new_gz;
-float dx, dy, dz, px, vx, steady, vdy, lastvdy, usdz, vdz, lastusdz, steadily;
+float dx, dy, dz, px, vx, steady, vdy, lastvdy, usdz, vdz, lastusdz, steadily, calculatedx, calculatedy, calculatedz;
 int ldy, lastldy;
 long duration;
 double timer, elapsed, dt;
@@ -17,6 +17,9 @@ const int echo = 3;
 const int trig = 5;
 double SoundSpeed = .0343;
 VL53L0X_RangingMeasurementData_t measure;
+
+//z changes based on x (yaw) and z (roll)
+//y changes nased on y (pitch) and z (roll)
 
 class EmaFilter { //using this bad boy again
   public:
@@ -102,9 +105,9 @@ void loop() {
   float virtual_x = az / 16384.0 * 9.81;
   float virtual_y = ax / 16384.0 * 9.81;
   float virtual_z = ay / 16384.0 * 9.81;
-  float real_gx = gx / 131.0;
-  float real_gy = gy / 131.0;
-  float real_gz = gz / 131.0;
+  float real_gx = gz / 131.0;
+  float real_gy = gx / 131.0;
+  float real_gz = gy / 131.0;
 
   new_ax = sensor_reading(virtual_x);
   last_ax = virtual_x;
@@ -148,7 +151,31 @@ void loop() {
   //I am instead bringing back the ultrasonic sensor for the left to right axis and a lazar ranging module for up and down translation. I will assume it doesn't move forward and backward unless it is rotated where I will use trigonometry to track movement in each direction. Assume a mecanum drive where it can't move up and down unless a ramp is introduced.
   //I will use the MPU6050 for acceleration and sensor delay correction but will use the 2 position sensors for position and derive them for approximate velocity
 
-  Serial.print("vdy: "); Serial.println(vdy);
+  float rz = dx * PI / 180.0; // Yaw (dx)
+  float rx = dy * PI / 180.0; // Roll (dy)
+  float ry = dz * PI / 180.0; // Pitch (dz)
+
+  float cz = cos(rx), sz = sin(rx);
+  float cx = cos(ry), sx = sin(ry);
+  float cy = cos(rz), sy = sin(rz);
+
+  calculatedx = (sin(-dx * PI / 180) * steadily) + (sin(-dy * PI / 180) * steady / 1000);
+
+  calculatedy = (cos(dz * PI / 180) * -steady / 1000) + (sin(-dz * PI / 180) * steadily);
+
+  calculatedz = (cos(dz));
+
+  calculatedx = (steady / 1000) * (cz * sy * sx - sz * cx) + steadily * (cz * sy * cx + sz * sx);
+
+  calculatedy = -(steady / 1000) * (sz * sy * sx + cz * cx) + steadily * (sz * sy * cx - cz * sx);
+
+  calculatedz = -(steady / 1000) * (cy * sx) + steadily * (cy * cx);
+
+  //I got lost in the math
+
+  Serial.println(calculatedz);
+
+  /* Serial.print("vdy: "); Serial.println(vdy);
   Serial.println(steady / 1000);
   Serial.print("dz: "); Serial.println(steadily);
   Serial.print("vdz: "); Serial.println(vdz);
@@ -172,7 +199,7 @@ void loop() {
   Serial.print(", dgy: ");
   Serial.print(dy);
   Serial.print(", dgz: ");
-  Serial.println(dz);
+  Serial.println(dz); */
 
 }
 
