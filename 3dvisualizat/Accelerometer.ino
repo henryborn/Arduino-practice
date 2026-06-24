@@ -10,11 +10,13 @@ int16_t ax, ay, az;
 int16_t gx, gy, gz;
 float last_gx, last_gy, last_gz, last_ax, last_ay, last_az, new_ax, new_ay, new_az, new_gx, new_gy, new_gz;
 float dx, dy, dz, px, vx, steady, vdy, lastvdy, usdz, vdz, lastusdz, steadily, calculatedx, calculatedy, calculatedz;
-int ldy, lastldy;
+int ldy, lastldy, reset;
 long duration;
+bool pressed;
 double timer, elapsed, dt;
 const int echo = 3;
 const int trig = 5;
+const int btn = 6;
 double SoundSpeed = .0343;
 VL53L0X_RangingMeasurementData_t measure;
 
@@ -42,7 +44,6 @@ void setup() {
   Wire.begin();
   Serial.begin(115200);
   while(!Serial);
-  Serial.println("hi");
   mpu.initialize();
 
   if(mpu.testConnection() == false){
@@ -55,6 +56,7 @@ void setup() {
   }
   pinMode(trig, OUTPUT); 
   pinMode(echo, INPUT); 
+  pinMode(btn, INPUT_PULLUP); //initially high but if a pullup resistor changes it goes to low
   mpu.setDLPFMode(MPU6050_DLPF_BW_20);
   mpu.setXAccelOffset(19600/8 - 3200/8 + 400/8 - 400/4); //don't mind, calibration is hard, when calibrating for some reason it automatically multiplies by about 8 so I have to divide by 8
   mpu.setYAccelOffset(-5900/8 + 1600/8 - 800/8 + 100/8);
@@ -71,6 +73,15 @@ void loop() {
   timer = micros();
   tof.rangingTest(&measure, false); //checks if it's ranging properly, put true to get an actual value
   ldy = measure.RangeMilliMeter;
+  reset = digitalRead(btn);
+
+  if (reset == LOW && pressed == false) {
+    pressed = true;
+    dx -= dx;
+    dy -= dy;
+    dz -= dz;
+  }
+  else if (reset == HIGH && pressed == true) pressed = false;
 
   
   if (ldy > 2000 || ldy < 50) ldy = steady;
@@ -159,21 +170,15 @@ void loop() {
   float cx = cos(ry), sx = sin(ry);
   float cy = cos(rz), sy = sin(rz);
 
-  calculatedx = (sin(-dx * PI / 180) * steadily) + (sin(-dy * PI / 180) * steady / 1000);
-
-  calculatedy = (cos(dz * PI / 180) * -steady / 1000) + (sin(-dz * PI / 180) * steadily);
-
-  calculatedz = (cos(dz));
-
   calculatedx = (steady / 1000) * (cz * sy * sx - sz * cx) + steadily * (cz * sy * -cx + sz * sx);
 
-  calculatedy = -(steady / 1000) * (sz * sy * sx + cz * cx) + steadily * (sz * sy * cx - cz * sx);
+  calculatedy = -(steady / 1000) * (sz * sy * sx + cz * cx) + steadily * (-sz * sy * cx - cz * sx);
 
   calculatedz = -(steady / 1000) * (cy * sx) + steadily * (cy * cx);
 
   //I got lost in the math, I think it works tho0ugh
 
-  Serial.print("vdy: "); Serial.println(vdy);
+  /* Serial.print("vdy: "); Serial.println(vdy);
   Serial.println(steady / 1000);
   Serial.print("dz: "); Serial.println(steadily);
   Serial.print("vdz: "); Serial.println(vdz);
@@ -198,13 +203,36 @@ void loop() {
   Serial.print(dy);
   Serial.print(", dgz: ");
   Serial.println(dz);
-  Serial.print(", offsetx: ");
-  Serial.print(calculatedx);
-  Serial.print(", offsety: ");
-  Serial.print(calculatedy);
-  Serial.print(", offsetz: ");
-  Serial.println(calculatedz);
+  Serial.print(", offsetx: "); */
 
+  //organized data
+  Serial.print(calculatedx);
+  Serial.print(",");
+  Serial.print(calculatedy);
+  Serial.print(",");
+  Serial.print(calculatedz);
+  Serial.print(",");
+  Serial.print(dx);
+  Serial.print(",");
+  Serial.print(dy);
+  Serial.print(",");
+  Serial.print(dz);
+  Serial.print(",");
+  Serial.print(vdy);
+  Serial.print(",");
+  Serial.print(vdz);
+  Serial.print(",");
+  Serial.print(real_gx);
+  Serial.print(",");
+  Serial.print(real_gy);
+  Serial.print(",");
+  Serial.print(real_gz);
+  Serial.print(",");
+  Serial.print(virtual_x);
+  Serial.print(",");
+  Serial.print(virtual_y);
+  Serial.print(",");
+  Serial.println(virtual_z);
 }
 
 //I know this is redundant, it wasn't when I wrote it I just wrote it very poorly and I don't feel like going through and cleaning it up

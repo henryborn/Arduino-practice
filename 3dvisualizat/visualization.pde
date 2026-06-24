@@ -7,15 +7,23 @@ float zOffset = 0;
 float yaw = 0;
 float pitch = 0;
 float roll = 0;
+float vy = 0;
+float vz = 0;
+float yawps = 0;
+float pitchps = 0;
+float rollps = 0;
+float ax = 0;
+float ay = 0;
+float az = 0;
 
 void setup() {
   size(800, 600, P3D); // Create an 800x600 canvas in 3D Mode
   
   // Print a list of available serial ports to your console
   printArray(Serial.list());
-  
+                                                             
   // REPLACE THE 0 WITH THE INDEX OF YOUR ARDUINO PORT FROM THE PRINTED LIST
-  String portName = Serial.list()[0]; 
+  String portName = Serial.list()[0];
   myPort = new Serial(this, portName, 115200);
   myPort.bufferUntil('\n'); // Only trigger a serial event when a new line arrives
 }
@@ -23,6 +31,30 @@ void setup() {
 void draw() {
   background(50); // Dark grey background
   lights();       // Turn on default 3D ambient lighting
+  
+  hint(DISABLE_DEPTH_TEST);
+  fill(255);
+  textSize(13);
+  text("Data: ", 20, 30);
+  text("X pos: " + nfc(xOffset, 2), 20, 50);
+  text("Y pos: " + nfc(yOffset, 2), 20, 70);
+  text("Z pos: " + nfc(zOffset, 2), 20, 90);
+  text("yaw: " + nfc(yaw, 2), 20, 110);
+  text("pitch: " + nfc(pitch, 2), 20, 130);
+  text("roll: " + nfc(roll, 2), 20, 150);
+  text("Y vel: " + nfc(vy, 2), 20, 170);
+  text("Z vel: " + nfc(vz, 2), 20, 190);
+  text("dps yaw: " + nfc(yawps, 2), 20, 210);
+  text("dps pitch: " + nfc(pitchps, 2), 20, 230);
+  text("dps roll: " + nfc(rollps, 2), 20, 250);
+  text("X accel: " + nfc(ax, 2), 20, 270);
+  text("Y accel: " + nfc(ay, 2), 20, 290);
+  text("Z accel: " + nfc(az, 2), 20, 310);
+  text("gyro has a lot of drift, press button to reset", width/2 - (115), height - 20);
+  text("no vx is calculated, sorry", width/2 - (50), height - 40);
+  text("vy and vz are sensor relative and not adjusted for rotation", width/2 - (160), height - 60);
+  hint(ENABLE_DEPTH_TEST);
+  
   
   // Move the origin (0,0,0) to the center of the screen
   translate(width/2, height/2, 0); 
@@ -54,6 +86,14 @@ void serialEvent(Serial myPort) {
       yaw = float(data[3]);
       pitch = float(data[4]);
       roll = float(data[5]);
+      vy = float(data[6]);
+      vz = float(data[7]);
+      yawps = float(data[8]);
+      pitchps = float(data[9]);
+      rollps = float(data[10]);
+      ax = float(data[11]);
+      ay = float(data[12]);
+      az = float(data[13]);
     }
   }
 }
