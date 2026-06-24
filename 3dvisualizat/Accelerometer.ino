@@ -60,7 +60,7 @@ void setup() {
   pinMode(echo, INPUT); //recieve data from the echo pin
   pinMode(btn, INPUT_PULLUP); //initially high but if a pullup resistor changes it goes to low, recieve data
   mpu.setDLPFMode(MPU6050_DLPF_BW_20); //run as fast as possible
-  mpu.setXAccelOffset(19600/8 - 3200/8 + 400/8 - 400/4); //don't mind, calibration is hard, when calibrating for some reason it automatically multiplies by about 8 so I have to divide by 8
+  mpu.setXAccelOffset(19600/8 - 3200/8 + 400/8 - 400/8); //don't mind, calibration is hard, when calibrating for some reason it automatically multiplies by about 8 so I have to divide by 8
   mpu.setYAccelOffset(-5900/8 + 1600/8 - 800/8 + 100/8);
   mpu.setZAccelOffset(-10000/8 + 1800/8 - 400/8 + 100/8);
   mpu.setXGyroOffset(610/8 + 320/8 + 160/8 + 80/4);
