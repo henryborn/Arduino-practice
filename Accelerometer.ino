@@ -165,17 +165,15 @@ void loop() {
 
   calculatedz = (cos(dz));
 
-  calculatedx = (steady / 1000) * (cz * sy * sx - sz * cx) + steadily * (cz * sy * cx + sz * sx);
+  calculatedx = (steady / 1000) * (cz * sy * sx - sz * cx) + steadily * (cz * sy * -cx + sz * sx);
 
   calculatedy = -(steady / 1000) * (sz * sy * sx + cz * cx) + steadily * (sz * sy * cx - cz * sx);
 
   calculatedz = -(steady / 1000) * (cy * sx) + steadily * (cy * cx);
 
-  //I got lost in the math
+  //I got lost in the math, I think it works tho0ugh
 
-  Serial.println(calculatedz);
-
-  /* Serial.print("vdy: "); Serial.println(vdy);
+  Serial.print("vdy: "); Serial.println(vdy);
   Serial.println(steady / 1000);
   Serial.print("dz: "); Serial.println(steadily);
   Serial.print("vdz: "); Serial.println(vdz);
@@ -199,7 +197,13 @@ void loop() {
   Serial.print(", dgy: ");
   Serial.print(dy);
   Serial.print(", dgz: ");
-  Serial.println(dz); */
+  Serial.println(dz);
+  Serial.print(", offsetx: ");
+  Serial.print(calculatedx);
+  Serial.print(", offsety: ");
+  Serial.print(calculatedy);
+  Serial.print(", offsetz: ");
+  Serial.println(calculatedz);
 
 }
 
